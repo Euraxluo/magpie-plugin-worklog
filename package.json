@@ -1,0 +1,60 @@
+{
+  "name": "magpie-plugin-worklog",
+  "version": "0.1.0",
+  "description": "工作上下文录制器：把 Claude Code / Codex / omp / git 的会话与提交归一成 agent 无关的时间线，随时换 agent/模型生成周报。Work context recorder panel for magpie: unified timeline from any local coding agent + git, model-agnostic.",
+  "author": "Euraxluo (https://github.com/Euraxluo)",
+  "type": "module",
+  "main": "./index.mjs",
+  "exports": "./index.mjs",
+  "files": [
+    "index.mjs",
+    "serve.mjs",
+    "lib",
+    "page",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "magpie",
+    "magpie-plugin",
+    "magpie-page",
+    "opencode",
+    "opencode-plugin",
+    "worklog",
+    "weekly-report"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Euraxluo/magpie-plugin-worklog.git"
+  },
+  "bugs": {
+    "url": "git+https://github.com/Euraxluo/magpie-plugin-worklog/issues"
+  },
+  "homepage": "https://github.com/Euraxluo/magpie-plugin-worklog#readme",
+  "engines": {
+    "magpie": ">=0.1.1340"
+  },
+  "scripts": {
+    "start": "node serve.mjs"
+  },
+  "magpie": {
+    "icon": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect x='4' y='4' width='56' height='56' rx='14' fill='%234f6ef7'/%3E%3Cpath d='M14 20h36M14 32h24M14 44h30' stroke='%23fff' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E",
+    "page": {
+      "title": "Work log",
+      "titles": {
+        "zh": "工作日志",
+        "zh-TW": "工作日誌"
+      },
+      "file": "page/index.html",
+      "icon": "page/icon.svg",
+      "service": {
+        "port": 3492,
+        "option": "port"
+      }
+    },
+    "options": {
+      "port": 3492
+    }
+  }
+}
