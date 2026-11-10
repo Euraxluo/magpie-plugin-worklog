@@ -138,13 +138,14 @@
   async function loadModels() {
     const days = $("f-days").value;
     const r = await api("GET", "/api/models?days=" + days);
-    const max = Math.max(1, ...r.models.map((m) => m.msgs));
-    syncModelFilter(r.models);
-    $("mtable").innerHTML = `<tr><th>模型</th><th>provider</th><th class="num">消息数</th><th class="num">会话数</th><th></th></tr>` +
+    syncModelFilter(r.ok ? r.models : []);
+    if (!r.ok) { $("mtable").innerHTML = `<tr><td colspan="5" class="stat">引擎接口不可用: ${esc(r.error || "?")}</td></tr>`; return; }
+    const max = Math.max(1, ...r.models.map((m) => m.sessions));
+    $("mtable").innerHTML = `<tr><th>模型</th><th>provider</th><th class="num">会话数</th><th class="num">tokens</th><th class="num">cost$</th><th></th></tr>` +
       r.models.map((m) => `<tr><td>${esc(m.model)}</td><td>${esc(m.provider)}</td>
-        <td class="num">${m.msgs}</td><td class="num">${m.sessions}</td>
-        <td><span class="bar" style="width:${Math.round(m.msgs / max * 140)}px"></span></td></tr>`).join("") ||
-      '<tr><td colspan="5" class="stat">（该时段无消息）</td></tr>';
+        <td class="num">${m.sessions}</td><td class="num">${m.tokens > 10000 ? (m.tokens / 1000).toFixed(1) + "k" : m.tokens}</td><td class="num">${m.cost ? m.cost.toFixed(2) : "-"}</td>
+        <td><span class="bar" style="width:${Math.round(m.sessions / max * 120)}px"></span></td></tr>`).join("") ||
+      '<tr><td colspan="6" class="stat">（该时段无会话）</td></tr>';
   }
 
   async function loadEvents() {
@@ -155,6 +156,7 @@
     if (model) qs.set("model", model);
     if (q) qs.set("q", q);
     const r = await api("GET", "/api/events?" + qs);
+    if (!r.ok) { $("count").textContent = "接口错误: " + (r.error || "?"); return; }
     $("count").textContent = `${r.events.length} 条`;
     const html = [];
     let lastDay = "";
@@ -226,7 +228,7 @@
 
   (async () => {
     const h = await api("GET", "/api/health").catch(() => null);
-    if (h) $("dbstat").textContent = h.ok ? "opencode.db 直连" : "库不可用: " + (h.error || "");
+    if (h) $("dbstat").textContent = h.ok ? "会话接口已连接" : "接口不可用: " + (h.error || "");
     await loadRunners().catch(() => { });
     await loadModels().catch((e) => toast("模型用量加载失败: " + e.message));
     await loadEvents().catch((e) => toast("时间线加载失败: " + e.message));
