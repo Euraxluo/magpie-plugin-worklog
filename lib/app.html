@@ -64,6 +64,13 @@
     <option value="codex">codex</option>
     <option value="omp">omp</option>
     <option value="opencode">opencode</option>
+    <option value="cursor">cursor</option>
+    <option value="zcode">zcode</option>
+    <option value="workbuddy">workbuddy</option>
+    <option value="grok">grok</option>
+    <option value="dsh">dsh</option>
+    <option value="antigravity">antigravity</option>
+    <option value="qoder">qoder</option>
   </select>
   <input type="text" id="f-q" placeholder="搜索会话内容（单词匹配最准）…" style="width:230px">
   <button id="refresh">🔍 搜索</button>
@@ -82,6 +89,13 @@
     <option value="codex">codex</option>
     <option value="omp">omp</option>
     <option value="opencode">opencode</option>
+    <option value="cursor">cursor</option>
+    <option value="zcode">zcode</option>
+    <option value="workbuddy">workbuddy</option>
+    <option value="grok">grok</option>
+    <option value="dsh">dsh</option>
+    <option value="antigravity">antigravity</option>
+    <option value="qoder">qoder</option>
   </select></label>
   <button class="primary" id="g-gen">✨ 生成周报</button>
   <button id="g-ctx">👀 看上下文</button>
@@ -126,7 +140,7 @@
     const r = await api("GET", "/api/models").catch(() => null);
     if (!r || !r.ok) { $("stat").textContent = "magpie 会话接口不可用"; return; }
     const total = r.models.reduce((a, m) => a + m.sessions, 0);
-    $("stat").textContent = `已索引 ${total} 个会话 · claude/codex/omp/opencode`;
+    $("stat").textContent = `已索引 ${total} 个会话 · 11 家 agent 会话`;
     const max = Math.max(1, ...r.models.map((m) => m.sessions));
     $("mtable").innerHTML = `<tr><th>agent</th><th class="num">会话数</th><th class="num">已扫描</th><th></th></tr>` +
       r.models.map((m) => `<tr><td>${esc(m.model)}</td>

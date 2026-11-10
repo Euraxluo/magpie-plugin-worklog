@@ -1,6 +1,6 @@
 {
   "name": "magpie-plugin-worklog",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "工作上下文录制器：把 Claude Code / Codex / omp / git 的会话与提交归一成 agent 无关的时间线，随时换 agent/模型生成周报。Work context recorder panel for magpie: unified timeline from any local coding agent + git, model-agnostic.",
   "author": "Euraxluo (https://github.com/Euraxluo)",
   "type": "module",
