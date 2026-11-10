@@ -20,7 +20,7 @@
   button.primary { background:var(--magpie-accent-soft, Highlight); border-color:transparent; color:var(--magpie-accent, HighlightText); font-weight:500; }
   .toolbar { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px; }
   select, input[type=text] { font:inherit; color:inherit; background:var(--magpie-card, ButtonFace);
-    border:1px solid var(--magpie-line, ButtonBorder); border-radius:6px; padding:3px 8px; max-width:220px; }
+    border:1px solid var(--magpie-line, ButtonBorder); border-radius:6px; padding:3px 8px; max-width:240px; }
   .mtable { width:100%; border-collapse:collapse; margin-bottom:14px; font-size:12px; }
   .mtable th, .mtable td { text-align:left; padding:5px 10px; border-bottom:1px solid var(--magpie-line, ButtonBorder); }
   .mtable th { color:var(--magpie-muted, GrayText); font-weight:500; }
@@ -29,9 +29,9 @@
   .timeline { display:flex; flex-direction:column; gap:6px; }
   .ev { display:flex; gap:10px; align-items:baseline; background:var(--magpie-card, Canvas);
     border:1px solid var(--magpie-line, ButtonBorder); border-radius:8px; padding:7px 11px; }
-  .ev .model { flex:none; font-size:10px; font-weight:600; padding:1px 7px; border-radius:99px; background:var(--magpie-accent-soft, Highlight); color:var(--magpie-accent, HighlightText); max-width:210px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ev.user .body { font-weight:500; }
-  .ev .meta { flex:none; font-size:11px; color:var(--magpie-muted, GrayText); min-width:118px; }
+  .ev .model { flex:none; font-size:10px; font-weight:600; padding:1px 7px; border-radius:99px; background:var(--magpie-accent-soft, Highlight); color:var(--magpie-accent, HighlightText); }
+  .src.claude { background:#d97757; } .src.codex { background:#4f6ef7; } .src.omp { background:#2f9e6e; } .src.opencode { background:#6b7280; }
+  .ev .meta { flex:none; font-size:11px; color:var(--magpie-muted, GrayText); min-width:130px; }
   .ev .body { word-break:break-all; }
   h2 { font-size:13px; font-weight:600; margin:18px 0 8px; }
   pre { background:var(--magpie-card, Canvas); border:1px solid var(--magpie-line, ButtonBorder); border-radius:8px;
@@ -50,38 +50,39 @@
 <body>
 <header>
   <h1>📋 工作日志</h1>
-  <span class="chip" id="dbstat">…</span>
+  <span class="chip" id="stat">…</span>
   <span class="spacer"></span>
 </header>
 
-<h2>模型用量（magpie 引擎库直查）</h2>
+<h2>会话库规模（magpie 会话索引）</h2>
 <table class="mtable" id="mtable"></table>
 
 <div class="toolbar">
-  <select id="f-days">
-    <option value="1">今天</option>
-    <option value="3">近 3 天</option>
-    <option value="7" selected>近 7 天</option>
-    <option value="14">近 14 天</option>
-    <option value="30">近 30 天</option>
+  <select id="f-agent">
+    <option value="">全部 agent</option>
+    <option value="claude">claude</option>
+    <option value="codex">codex</option>
+    <option value="omp">omp</option>
+    <option value="opencode">opencode</option>
   </select>
-  <select id="f-model"><option value="">全部模型</option></select>
-  <input type="text" id="f-q" placeholder="搜索关键词…" style="width:170px">
-  <button id="refresh">🔍 筛选</button>
+  <input type="text" id="f-q" placeholder="搜索会话内容（单词匹配最准）…" style="width:230px">
+  <button id="refresh">🔍 搜索</button>
   <span class="stat" id="count"></span>
 </div>
 <div class="timeline" id="timeline"></div>
 
 <h2>周报生成</h2>
 <div class="genbar">
-  <label>agent 工具 <select id="g-runner"></select></label>
+  <label>工具 <select id="g-runner"></select></label>
   <label>模型 <select id="g-model"></select></label>
-  <label>范围 <select id="g-days">
-    <option value="7" selected>近 7 天</option>
-    <option value="14">近 14 天</option>
-    <option value="30">近 30 天</option>
+  <label>主题 <input type="text" id="g-q" placeholder="如：宝盒 / 货车 / ztocc" style="width:150px"></label>
+  <label>范围 <select id="g-agent">
+    <option value="">全部</option>
+    <option value="claude">claude</option>
+    <option value="codex">codex</option>
+    <option value="omp">omp</option>
+    <option value="opencode">opencode</option>
   </select></label>
-  <label class="stat">只筛模型 <select id="g-filter"><option value="">全部</option></select></label>
   <button class="primary" id="g-gen">✨ 生成周报</button>
   <button id="g-ctx">👀 看上下文</button>
   <span class="stat" id="g-note"></span>
@@ -121,53 +122,37 @@
     if (q.get("theme")) document.documentElement.style.colorScheme = q.get("theme");
   } catch { }
 
-  function syncModelFilter(models) {
-    for (const sel of [$("f-model"), $("g-filter")]) {
-      const cur = sel.value;
-      sel.innerHTML = '<option value="">全部模型</option>';
-      for (const m of models) {
-        const o = document.createElement("option");
-        o.value = m.model;
-        o.textContent = `${m.model} (${m.msgs})`;
-        sel.appendChild(o);
-      }
-      if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
-    }
-  }
-
-  async function loadModels() {
-    const days = $("f-days").value;
-    const r = await api("GET", "/api/models?days=" + days);
-    syncModelFilter(r.ok ? r.models : []);
-    if (!r.ok) { $("mtable").innerHTML = `<tr><td colspan="5" class="stat">引擎接口不可用: ${esc(r.error || "?")}</td></tr>`; return; }
+  async function loadUsage() {
+    const r = await api("GET", "/api/models").catch(() => null);
+    if (!r || !r.ok) { $("stat").textContent = "magpie 会话接口不可用"; return; }
+    const total = r.models.reduce((a, m) => a + m.sessions, 0);
+    $("stat").textContent = `已索引 ${total} 个会话 · claude/codex/omp/opencode`;
     const max = Math.max(1, ...r.models.map((m) => m.sessions));
-    $("mtable").innerHTML = `<tr><th>模型</th><th>provider</th><th class="num">会话数</th><th class="num">tokens</th><th class="num">cost$</th><th></th></tr>` +
-      r.models.map((m) => `<tr><td>${esc(m.model)}</td><td>${esc(m.provider)}</td>
-        <td class="num">${m.sessions}</td><td class="num">${m.tokens > 10000 ? (m.tokens / 1000).toFixed(1) + "k" : m.tokens}</td><td class="num">${m.cost ? m.cost.toFixed(2) : "-"}</td>
-        <td><span class="bar" style="width:${Math.round(m.sessions / max * 120)}px"></span></td></tr>`).join("") ||
-      '<tr><td colspan="6" class="stat">（该时段无会话）</td></tr>';
+    $("mtable").innerHTML = `<tr><th>agent</th><th class="num">会话数</th><th class="num">已扫描</th><th></th></tr>` +
+      r.models.map((m) => `<tr><td>${esc(m.model)}</td>
+        <td class="num">${m.sessions}</td><td class="num">${m.msgs}</td>
+        <td><span class="bar" style="width:${Math.round(m.sessions / max * 140)}px"></span></td></tr>`).join("");
   }
 
-  async function loadEvents() {
-    const days = $("f-days").value;
-    const model = $("f-model").value;
-    const q = $("f-q").value;
-    const qs = new URLSearchParams({ days, limit: "300" });
-    if (model) qs.set("model", model);
+  async function loadHits() {
+    const q = $("f-q").value.trim();
+    const agent = $("f-agent").value;
+    const qs = new URLSearchParams({ limit: "200" });
     if (q) qs.set("q", q);
-    const r = await api("GET", "/api/events?" + qs);
+    if (agent) qs.set("agents", agent);
+    if (!q) { $("count").textContent = "输入关键词再搜（magpie 接口按内容匹配）"; $("timeline").innerHTML = ""; return; }
+    $("count").innerHTML = '<span class="spin"></span> 搜索中（跨 agent 索引，最长约 30s）…';
+    const r = await api("GET", "/api/hits?" + qs);
     if (!r.ok) { $("count").textContent = "接口错误: " + (r.error || "?"); return; }
-    $("count").textContent = `${r.events.length} 条`;
+    const scope = Object.entries(r.meta || {}).filter(([, v]) => !v.error).map(([k, v]) => `${k}:${v.searched}`).join(" ");
+    $("count").textContent = `${r.hits.length} 命中（扫描 ${scope}）`;
     const html = [];
-    let lastDay = "";
-    for (const e of r.events) {
-      const d = e.at.slice(0, 10);
-      if (d !== lastDay) { lastDay = d; html.push(`<h2>${d}</h2>`); }
-      html.push(`<div class="ev ${e.role}"><span class="model">${esc(e.model || e.role)}</span>
-        <span class="meta">${e.at.slice(11, 16)} ${e.role === "user" ? "→" : "←"} ${esc((e.project || "").split("/").slice(-1)[0])}</span>
-        <span class="body">${esc(e.text.slice(0, 220))}</span></div>`);
+    for (const h of r.hits) {
+      html.push(`<div class="ev"><span class="model src ${h.agent}">${h.agent}</span>
+        <span class="meta">${esc(h.role)}/${esc(h.kind)}</span>
+        <span class="body">${esc(h.text.slice(0, 260))}</span></div>`);
     }
-    $("timeline").innerHTML = html.join("") || '<div class="stat">无记录</div>';
+    $("timeline").innerHTML = html.join("") || '<div class="stat">无命中</div>';
   }
 
   async function loadRunners() {
@@ -196,16 +181,10 @@
     }
   }
 
-  $("refresh").onclick = async () => {
-    try { await loadModels(); await loadEvents(); }
-    catch (e) { toast("加载失败: " + e.message); }
-  };
-  $("f-days").onchange = () => $("refresh").click();
+  $("refresh").onclick = () => loadHits().catch((e) => toast("搜索失败: " + e.message));
   $("g-ctx").onclick = async () => {
-    const r = await api("POST", "/api/context-preview", {
-      days: Number($("g-days").value), model: $("g-filter").value || undefined,
-    }).catch((e) => ({ error: e.message }));
-    $("report").textContent = r.error ? "错误: " + r.error : `（${r.count} 条事件 · 约 ${r.tokens} tokens）\n\n` + r.text;
+    const r = await api("POST", "/api/context-preview", { q: $("g-q").value.trim(), agents: $("g-agent").value ? [$("g-agent").value] : undefined }).catch((e) => ({ error: e.message }));
+    $("report").textContent = r.error ? "错误: " + r.error : `（${r.count} 命中 · 约 ${r.tokens} tokens）\n\n` + r.text;
   };
   $("g-gen").onclick = async () => {
     const b = $("g-gen");
@@ -213,25 +192,23 @@
     $("g-note").textContent = "";
     try {
       const r = await api("POST", "/api/generate", {
-        days: Number($("g-days").value),
         runner: $("g-runner").value,
         model: $("g-model").value.startsWith("默认") ? undefined : $("g-model").value,
-        filterModel: $("g-filter").value || undefined,
+        q: $("g-q").value.trim() || undefined,
+        agents: $("g-agent").value ? [$("g-agent").value] : undefined,
       });
       if (r.ok) {
         $("report").textContent = r.text;
-        $("g-note").textContent = `已存 ${(r.file || "").split("/").pop()} · ${r.events} 事件`;
+        $("g-note").textContent = `已存 ${(r.file || "").split("/").pop()} · ${r.events} 命中`;
       } else $("report").textContent = "生成失败: " + (r.error || "?");
     } catch (e) { toast("生成失败: " + e.message, 6000); }
     finally { b.disabled = false; b.textContent = "✨ 生成周报"; }
   };
 
   (async () => {
-    const h = await api("GET", "/api/health").catch(() => null);
-    if (h) $("dbstat").textContent = h.ok ? "会话接口已连接" : "接口不可用: " + (h.error || "");
     await loadRunners().catch(() => { });
-    await loadModels().catch((e) => toast("模型用量加载失败: " + e.message));
-    await loadEvents().catch((e) => toast("时间线加载失败: " + e.message));
+    await loadUsage().catch(() => { });
+    await loadHits().catch(() => { });
   })();
 })();
 </script>
